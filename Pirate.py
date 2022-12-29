@@ -1,0 +1,2 @@
+class Pirate:
+    def __init__(self, 
