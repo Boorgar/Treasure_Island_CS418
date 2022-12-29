@@ -1,3 +1,3 @@
 class Agent:
-    def __init__(self, location):
-        self.location = location
+    def __init__(self):
+        pass
