@@ -5,24 +5,37 @@ from time import sleep
 import os
 
 from Agent import Agent, Player, Pirate
-from pathfinding import Node
+from Node import Node
 
 
 
 class treasureIsland:
     def __init__(self, fileName, delimiter):
+
+        self.size = None
+        self.turnRevealPrison = None
+        self.nRegion = None
+        self.turnFreePirate = None
+        self.treasurePos = None
+        self.map = None
+
         # Read file
         with open(fileName, 'r') as f:
             # Get size
             self.size = [int(x) for x in f.readline().split(sep=' ')]
+
             # Get turn number that the pirate reveals the prison
             self.turnRevealPrison = int(f.readline())
+
             # Get the number of regions
             self.nRegion = int(f.readline())
+
             # Get turn number that the pirate is free
             self.turnFreePirate = int(f.readline())
+
             # Get treasure position
             self.treasurePos = [int(x) for x in f.readline().split(sep=' ')]
+
             # Convert to 2D array
             self.map = []
             for i in range(self.size[1]): # Use Height for loop
@@ -395,7 +408,7 @@ class treasureIsland:
         self.spawnAgents()
         while True:
             os.system('cls')
-            self.printMap()
+            self.printMap() 
 
             self.playerTurn()
             if self.checkWin(self.Player):
