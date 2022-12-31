@@ -47,7 +47,7 @@ class treasureIsland:
         self.Pirate = None
         self.log = []
         self.turn = 0
-        self.win = 0
+        self.win = False
         self.hint = None
         self.hintTrue = False
 
@@ -96,7 +96,7 @@ class treasureIsland:
                 print(self.map[i][j], end=" ")
             print()
 
-    # Find shorteset path to treasure
+    # Find shorteset path to treasure for pirates
     def pirateFindPath(self):
         # A* algorithm
         def AStar(start, end):
@@ -139,7 +139,6 @@ class treasureIsland:
         end = self.treasurePos
         path = AStar(start, end)
         return path
-
         
     # Spawn agents
     def spawnAgents(self):
@@ -150,15 +149,18 @@ class treasureIsland:
         self.Pirate = Pirate(pirateStartPos[0], pirateStartPos[1])
 
 
-    # Check if agent steps on treasure
+    # Check if agent(Player/Pirate) win, return True if that agent win
     def checkWin(self, agent):
-        if agent.getPosition() == self.treasurePos:
-            return True
-        elif agent.name == "Player":
-            if agent.foundTreasure:
+        if agent.name == "Player":
+            # Check if player steps on treasure or scanner found treasure
+            if agent.getPosition() == self.treasurePos or agent.scannerFoundTreasure:
                 return True
             return False
-        else:
+
+        elif agent.name == "Pirate":
+            # Check if pirate steps on treasure
+            if agent.getPosition() == self.treasurePos:
+                return True
             return False
 
 
@@ -293,6 +295,19 @@ class treasureIsland:
     # Player turn, process player's actions (verify, move&scan, moveBigStep, teleport)
     def playerTurn(self):
 
+        '''
+            Player's actions:
+            1. Verify pirate's hint (return True if hint is correct, the game will do the checking)
+            2. Move and scan 
+            3. Move big step
+            4. Teleport (one time only)
+
+            Player's win condition:
+            1. Player steps on treasure
+            2. Scanner found treasure
+            
+        '''
+
         # Verify pirate's hint
         def verifyHint():
             if self.hintTrue:
@@ -386,6 +401,14 @@ class treasureIsland:
 
     # Pirate turn
     def pirateTurn(self):
+        '''
+            Pirate have 3 actions:
+            1. Move (if isFree == True)
+            2. Give hint
+            
+            Pirate's win condition:
+            1. Pirate steps on treasure (after free)
+        '''
         def giveHint():
             self.hint = np.random.randint(1, 16)
             self.hintTrue = self.checkHint(self.hint)
@@ -395,7 +418,7 @@ class treasureIsland:
         print("Pirate turn. Argh!\n")
         if self.turnFreePirate == self.turn:
             self.Pirate.isFree = True
-            print("Free the pirate")
+            print("The pirate is free")
             return
         
         if self.Pirate.isFree:
@@ -406,18 +429,30 @@ class treasureIsland:
     # main
     def main(self):
         self.spawnAgents()
+
+        '''
+            How game.main() loop works:
+            1. Print map
+            2. Player turn
+            3. Check player win
+            4. Pirate turn (runs in background)
+            5. Check pirate win
+            6. Repeat
+        '''
+
         while True:
+        
             os.system('cls')
             self.printMap() 
 
             self.playerTurn()
             if self.checkWin(self.Player):
-                self.win = 1
+                self.win = True
                 break
 
             self.pirateTurn()
             if self.checkWin(self.Pirate):
-                self.win = 0
+                self.win = False
                 break
 
             self.turn += 1

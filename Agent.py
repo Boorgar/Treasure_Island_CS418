@@ -14,7 +14,7 @@ class Player(Agent):
         super().__init__(xStartPos, yStartPos)
         self.name = "Player"
         self.teleportCoin = 1
-        self.foundTreasure = False
+        self.scannerFoundTreasure = False
 
 class Pirate(Agent):
     def __init__(self, prison_x, prison_y):
