@@ -208,37 +208,73 @@ class treasureIsland:
     def checkHint(self, hint):
         match hint:
             case 1:
-                print 
+                print("Hint: Random locations that doesn't contain treasure (1 to 12)")
+                nTiles = np.random.randint(1, 13)
+                for i in range(nTiles):
+                    x = np.random.randint(0, self.size[0])
+                    y = np.random.randint(0, self.size[1])
+                    if self.treasurePos == (x,y):
+                        self.hintTrue = False
+                self.hintTrue = True
             case 2:
+                print("Hint: 2-5 regions that 1 of them has the treasure")
+                
                 return True
             case 3:
+                print("Hint: 1-3 regions that do not contain the treasure")
+
                 return True
             case 4:
+                print("Hint: A large rectangle area that has the treasure")
+
                 return True
             case 5:
+                print("Hint: A small rectangle area that doesn't has the treasure")
+
                 return True
             case 6:
+                print("Hint: The nearest person to the treasure")
+
                 return True
             case 7:
+                print("Hint: A column and/or a row that contain the treasure")
+
                 return True
             case 8:
+                print("Hint: A column and/or a row that do not contain the treasure")
+
                 return True
             case 9:
+                print("Hint: 2 regions that the treasure is somewhere in their boundary")
+
                 return True
             case 10:
+                print("Hint: The treasure is somewhere in a boundary of 2 regions")
+
                 return True
             case 11:
+                print("Hint: The treasure is somewhere in an area bounded by 2-3 tiles from sea")
+
                 return True
             case 12:
+                print("Hint: A half of the map without treasure")
+
                 return True
             case 13:
+                print("Hint: From the center of the map/from the prison that he's staying, he tells you a direction that has the treasure (W, E, N, S or SE, SW, NE, NW)")
+                
                 return True
             case 14:
+                print("Hint: 2 squares that are different in size, the small one is placed inside the bigger one, the treasure is somewhere inside the gap between 2 squares")
+                
                 return True
             case 15:
+                print("Hint: The treasure is in a region that has mountain")
+                
                 return True
             case _:
                 print('Invalid hint')
+                
                 return False
                
     # Player turn, process player's actions (verify, move&scan, moveBigStep, teleport)
@@ -338,7 +374,7 @@ class treasureIsland:
     # Pirate turn
     def pirateTurn(self):
         def giveHint():
-            self.hint = np.random.randint(0, 16)
+            self.hint = np.random.randint(1, 16)
             self.hintTrue = self.checkHint(self.hint)
             return
         
