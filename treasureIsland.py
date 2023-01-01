@@ -1,23 +1,33 @@
 import random
 import numpy as np
-from argparse import ArgumentParser
 from time import sleep
 import os
 
-from Agent import Agent, Player, Pirate
+# Prettytable for pretty map
+from prettytable import PrettyTable
+
+# Colorama for Windows, colored font
+from colorama import init as colorama_init
+from colorama import Fore
+from colorama import Style
+
+from Agent import Player, Pirate
+from ConsoleColor import ConsoleColor
 from Node import Node
 
 
 
 class treasureIsland:
-    def __init__(self, fileName, delimiter):
+    def __init__(self, fileName, delimiter, debug=False):
 
         self.size = None
         self.turnRevealPrison = None
         self.nRegion = None
         self.turnFreePirate = None
         self.treasurePos = None
+
         self.map = None
+        self.terrain = None
 
         # Read file
         with open(fileName, 'r') as f:
@@ -34,14 +44,35 @@ class treasureIsland:
             self.turnFreePirate = int(f.readline())
 
             # Get treasure position
-            self.treasurePos = [int(x) for x in f.readline().split(sep=' ')]
+            self.treasurePos = tuple(int(x) for x in f.readline().split(sep=' '))
 
             # Convert to 2D array
-            self.map = []
-            for i in range(self.size[1]): # Use Height for loop
-                self.map.append(f.readline().split(delimiter))
+            self.map = np.zeros((self.size[0], self.size[1]), dtype=int)
+            self.terrain = np.zeros((self.size[0], self.size[1]), dtype=int)
+
+            # Use Height for loop
+            for i in range(self.size[1]): 
+                row = f.readline().replace(' ','').split(delimiter)
+
+                # Use Width for loop
+                for j in range(self.size[0]): 
+                    
+                    # Convert to list by unpacking string. Ex: [*j] -> ['1', '2']
+                    cell = [*row[j].strip()]
+                    
+                    # Check if cell have terrain
+                    if len(cell) != 1:
+                        self.map[j][i] = int(cell[0])
+                        self.terrain[j][i] = ord(cell[1])
+                    else:
+                        self.map[j][i] = int(cell[0])
+                        self.terrain[j][i] = 0
+
+
             self.map = np.array(self.map).reshape(self.size[0], self.size[1])
 
+        # Debug mode: show both Player and Pirate position
+        self.debug = debug
 
         self.Player = None
         self.Pirate = None
@@ -69,10 +100,43 @@ class treasureIsland:
 
     # Print map
     def printMap(self):
-        for i in range(self.size[1]):
-            for j in range(self.size[0]):
-                print(self.map[i][j], end=" ")
+        # Clear screen
+        os.system('cls' if os.name == 'nt' else 'clear')
+
+        colour = list(vars(Fore).values())
+
+        colorama_init()
+
+        # Print map
+        for i in range(self.size[1]): # Use Height for loop
+            for j in range(self.size[0]): # Use Width for loop
+                if self.map[i][j] == '0':
+                    print(Fore.CYAN + '0', end='')
+                else:
+                    print(Fore.BLACK + str(self.map[i][j]), end='')
+                if self.terrain[i][j] != 0:
+                    print(Fore.BLACK + chr(self.terrain[i][j]), end='')
+
+                # Print player
+                if self.Player.getPosition() == (j, i):
+                    print(Fore.GREEN + 'Q', end='')
+                if self.debug:
+                    # Print pirate
+                    if self.Pirate.getPosition() == (j, i):
+                        print(Fore.RED + 'X', end='')
+                    # Print treasure
+                    if self.treasurePos == (j, i):
+                        print(Fore.YELLOW + 'T', end='')
+                print(Style.RESET_ALL, end=' ')
             print()
+
+
+                
+
+        
+
+        
+        
 
     # Find shorteset path to treasure for pirates
     def pirateFindPath(self):
@@ -120,12 +184,37 @@ class treasureIsland:
         
     # Spawn agents
     def spawnAgents(self):
+
+        # Check if position is valid
+        def checkValidSpawn(pos):
+            x, y = pos
+            if self.getMapTile(x, y) == 0:
+                return False
+            return True
+        
+        # Spawn player
         playerStartPos = np.random.randint(0, self.size, size=(2))
         pirateStartPos = np.random.randint(0, self.size, size=(2))
 
+        # Make sure player don't spawn on Treasure
+        while playerStartPos[0] == self.treasurePos[0] and playerStartPos[1] == self.treasurePos[1]:
+            playerStartPos = np.random.randint(0, self.size, size=(2))
+
+        # Make sure player and pirate don't spawn at the same position or pirate s
+        while playerStartPos[0] == pirateStartPos[0] and playerStartPos[1] == pirateStartPos[1]:
+            pirateStartPos = np.random.randint(0, self.size, size=(2))
+
+        # Spawn player
+        while not checkValidSpawn(playerStartPos):
+            playerStartPos = np.random.randint(0, self.size, size=(2))
+
+        # Spawn pirate
+        while not checkValidSpawn(pirateStartPos):
+            pirateStartPos = np.random.randint(0, self.size, size=(2))
+
+        # Spawn agents
         self.Player = Player(playerStartPos[0], playerStartPos[1])
         self.Pirate = Pirate(pirateStartPos[0], pirateStartPos[1])
-
 
     # Check if agent(Player/Pirate) win, return True if that agent win
     def checkWin(self, agent):
@@ -140,7 +229,6 @@ class treasureIsland:
             if agent.getPosition() == self.treasurePos:
                 return True
             return False
-
 
     # Move agent
     def move(self, agent, direction, step):
@@ -376,7 +464,6 @@ class treasureIsland:
 
         self.turn += 1
 
-
     # Pirate turn
     def pirateTurn(self):
         '''
@@ -402,11 +489,23 @@ class treasureIsland:
         if self.Pirate.isFree:
             self.move(self.Pirate, direction='W', step=1)
 
-        
+    # End scene, write output to file
+    def conclude(self):
+        with open('output.txt', 'w') as f:
+            f.writeline(self.turn)
+            if self.win == 1:
+                f.writeline("WIN")
+            else:
+                f.writeline("LOSE")
+            for i in self.log:
+                f.writeline(i)
 
     # main
     def main(self):
         self.spawnAgents()
+
+        # Set console size
+        os.system('mode con: cols=100 lines=50')
 
         '''
             How game.main() loop works:
@@ -419,8 +518,6 @@ class treasureIsland:
         '''
 
         while True:
-        
-            os.system('cls')
             self.printMap() 
 
             self.playerTurn()
@@ -434,19 +531,16 @@ class treasureIsland:
                 break
 
             self.turn += 1
-        # with open('output.txt', 'w') as f:
-        #     f.writeline(self.turn)
-        #     if self.win == 1:
-        #         f.writeline("WIN")
-        #     else:
-        #         f.writeline("LOSE")
-        #     for i in self.log:
-        #         f.writeline(i)
+        
+        # # End game
+        # self.conclude()
 
 
 if __name__ == "__main__":
-    game = treasureIsland('input.txt', ';')
-    game.main()
+    game = treasureIsland('input.txt', ';', debug=True)
+    game.spawnAgents()
+    game.printMap()
+    # game.main()
 
 
 
