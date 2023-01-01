@@ -66,28 +66,6 @@ class treasureIsland:
     # Get map size
     def getMapSize(self):
         return self.size
-    
-    # Generate map
-    def generateMap(self):
-        # Check map valid
-        def checkMapValid():
-            pass
-        for i in range(self.size):
-            for j in range(self.size):
-                self.map[i][j] = random.randint(0, 1)
-        # Place treasure
-        self.map[self.treasure[0]][self.treasure[1]] = 2
-        return self.map
-
-    # Save map
-    def saveMap(self, fileName):
-        with open(fileName, 'w') as f:
-            for i in range(self.size[1]):
-                for j in range(self.size[0]):
-                    if j != 0:
-                        f.write(";")
-                    f.write(str(self.map[i][j]))
-                f.write("\n")
 
     # Print map
     def printMap(self):
