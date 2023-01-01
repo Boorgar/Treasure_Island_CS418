@@ -25,3 +25,5 @@ class ConsoleColor:
 
     # End
     END = '\033[0m'
+
+    

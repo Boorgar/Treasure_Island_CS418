@@ -11,8 +11,9 @@ from colorama import init as colorama_init
 from colorama import Fore
 from colorama import Style
 
-from Agent import Player, Pirate
+
 from ConsoleColor import ConsoleColor
+from Agent import Player, Pirate
 from Node import Node
 
 
@@ -26,8 +27,12 @@ class treasureIsland:
         self.turnFreePirate = None
         self.treasurePos = None
 
+        # Map and terrain layers
         self.map = None
         self.terrain = None
+
+        # Prison locations
+        self.prisonPos = None
 
         # Read file
         with open(fileName, 'r') as f:
@@ -49,6 +54,7 @@ class treasureIsland:
             # Convert to 2D array
             self.map = np.zeros((self.size[0], self.size[1]), dtype=int)
             self.terrain = np.zeros((self.size[0], self.size[1]), dtype=int)
+            self.prisonPos = []
 
             # Use Height for loop
             for i in range(self.size[1]): 
@@ -63,6 +69,8 @@ class treasureIsland:
                     # Check if cell have terrain
                     if len(cell) != 1:
                         self.map[j][i] = int(cell[0])
+                        if cell[1] == 'P':
+                            self.prisonPos.append((i,j))
                         self.terrain[j][i] = ord(cell[1])
                     else:
                         self.map[j][i] = int(cell[0])
@@ -70,6 +78,8 @@ class treasureIsland:
 
 
             self.map = np.array(self.map).reshape(self.size[0], self.size[1])
+            self.terrain = np.array(self.terrain).reshape(self.size[0], self.size[1])
+            self.prisonPos = np.array(self.prisonPos)
 
         # Debug mode: show both Player and Pirate position
         self.debug = debug
@@ -103,32 +113,63 @@ class treasureIsland:
         # Clear screen
         os.system('cls' if os.name == 'nt' else 'clear')
 
-        colour = list(vars(Fore).values())
+        # Colors list
+        colors = [
+            '\033[90m',     # Black
+            '\033[91m',     # Red
+            '\033[92m',     # Green
+            # '\033[93m',     # Yellow
+            # '\033[94m',     # Blue
+            '\033[95m',     # Purple
+            '\033[96m',     # Cyan
+            '\033[97m'      # Gray
+        ]
+        print(colors)
+
+        regionColor = {}
+        for i in range(self.nRegion):
+            regionColor[i] = random.choice(colors)
+            colors.remove(regionColor[i])
 
         colorama_init()
 
+        map_print = PrettyTable()
+        map_print.align = 'l'
+        map_print.padding_width = 5
         # Print map
         for i in range(self.size[1]): # Use Height for loop
+            row = []
             for j in range(self.size[0]): # Use Width for loop
-                if self.map[i][j] == '0':
-                    print(Fore.CYAN + '0', end='')
-                else:
-                    print(Fore.BLACK + str(self.map[i][j]), end='')
-                if self.terrain[i][j] != 0:
-                    print(Fore.BLACK + chr(self.terrain[i][j]), end='')
 
-                # Print player
+                # Use cell to manage output 
+                cell = []
+                if self.map[i][j] == 0:
+                    cell.append(ConsoleColor.BLUE + '0' + ConsoleColor.END)
+                else:
+                    cell.append(regionColor[self.map[i][j]] + str(self.map[i][j]) + ConsoleColor.END)
+
+                # Add terrain layer
+                if self.terrain[i][j] != 0:
+                    cell.append(ConsoleColor.CYAN + chr(self.terrain[i][j]) + ConsoleColor.END)
+                
+                # Add agent layer
+                # Print Player
                 if self.Player.getPosition() == (j, i):
-                    print(Fore.GREEN + 'Q', end='')
+                    cell.append(ConsoleColor.BgBLUE + '*' + ConsoleColor.END)
+
+                # Debug mode
                 if self.debug:
-                    # Print pirate
+                    # Print Pirate
                     if self.Pirate.getPosition() == (j, i):
-                        print(Fore.RED + 'X', end='')
-                    # Print treasure
+                        cell.append(ConsoleColor.BgRED + '+' + ConsoleColor.END)
+                    # Print Treasure
                     if self.treasurePos == (j, i):
-                        print(Fore.YELLOW + 'T', end='')
-                print(Style.RESET_ALL, end=' ')
-            print()
+                        cell.append(ConsoleColor.YELLOW + 'T' + ConsoleColor.END)
+                
+                row.append(''.join(cell))
+            map_print.add_row(row)
+        print(map_print.get_string(header=False, border=True))
+
 
 
                 
@@ -192,25 +233,21 @@ class treasureIsland:
                 return False
             return True
         
+        # Spawn pirate
+        rng = np.random.randint(0,len(self.prisonPos))
+        pirateStartPos = self.prisonPos[rng]
+        
         # Spawn player
         playerStartPos = np.random.randint(0, self.size, size=(2))
-        pirateStartPos = np.random.randint(0, self.size, size=(2))
-
-        # Make sure player don't spawn on Treasure
-        while playerStartPos[0] == self.treasurePos[0] and playerStartPos[1] == self.treasurePos[1]:
+        while True:
+            # Make sure player don't spawn on Treasure
+            if playerStartPos[0] != self.treasurePos[0] and playerStartPos[1] != self.treasurePos[1]:
+                # Make sure player and pirate don't spawn at the same position or pirate s
+                if playerStartPos[0] != pirateStartPos[0] and playerStartPos[1] != pirateStartPos[1]:
+                    # Make sure player don't spawn on ocean tile
+                    if checkValidSpawn(playerStartPos):
+                        break
             playerStartPos = np.random.randint(0, self.size, size=(2))
-
-        # Make sure player and pirate don't spawn at the same position or pirate s
-        while playerStartPos[0] == pirateStartPos[0] and playerStartPos[1] == pirateStartPos[1]:
-            pirateStartPos = np.random.randint(0, self.size, size=(2))
-
-        # Spawn player
-        while not checkValidSpawn(playerStartPos):
-            playerStartPos = np.random.randint(0, self.size, size=(2))
-
-        # Spawn pirate
-        while not checkValidSpawn(pirateStartPos):
-            pirateStartPos = np.random.randint(0, self.size, size=(2))
 
         # Spawn agents
         self.Player = Player(playerStartPos[0], playerStartPos[1])
