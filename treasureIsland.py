@@ -16,6 +16,9 @@ from ConsoleColor import ConsoleColor
 from Agent import Player, Pirate
 from Node import Node
 
+# Get Manhattan distance
+def manhattanDist(pos1, pos2):
+    return sum(abs(value1 - value2) for value1, value2 in zip(pos1, pos2))
 
 
 class treasureIsland:
@@ -90,7 +93,8 @@ class treasureIsland:
         self.turn = 0
         self.win = False
         self.hint = None
-        self.hintTrue = False
+        self.trueHint = None
+        self.falseHint = None
     
 
     # Get map
@@ -112,10 +116,6 @@ class treasureIsland:
     # Get map size
     def getMapSize(self):
         return self.size
-
-    # Get Manhattan distance
-    def manhattanDist(pos1, pos2):
-        return sum(abs(value1 - value2) for value1, value2 in zip(pos1, pos2))
 
     # Print map
     def printMap(self):
@@ -307,226 +307,279 @@ class treasureIsland:
         print("Treasure not found!")
         return False
 
-    # Check pirate's hint, return True if hint is correct
-    def checkHint(self, hint):
+    # Pirate give hint, also tick if hint is true or not
+    def pirateGiveHint(self, hint):
+        description = ''
+        hintIsTrue = False
         match hint:
             case 1:
-                print("Hint: Random locations that doesn't contain treasure (1 to 12)")
+                description = "Hint: Random locations that doesn't contain treasure (1 to 12)"
+                print(description)
+                # Random number of tiles
                 nTiles = np.random.randint(1, 13)
-                for i in range(nTiles):
-                    while True:
-                        x = np.random.randint(0, self.size[0])
-                        y = np.random.randint(0, self.size[1])
-                        print("x: {}, y: {}".format(x, y))
-                        if self.getMapTerrain(x, y) == ord('T'):
-                            self.hintTrue = False
-                self.hintTrue = True        
-                return self.hintTrue
-            case 2:
-                print("Hint: 2-5 regions that 1 of them has the treasure")
-                nTiles = nTiles = np.random.randint(2, 6)
                 for i in range(nTiles):
                     x = np.random.randint(0, self.size[0])
                     y = np.random.randint(0, self.size[1])
+
+                    # Print the tiles
                     print("x: {}, y: {}".format(x, y))
                     if self.getMapTerrain(x, y) == ord('T'):
-                        self.hintTrue = True
-                self.hintTrue = False
-                return self.hintTrue
+                        hintIsTrue = True
+            case 2:
+                description = "Hint: 2-5 regions that 1 of them has the treasure"
+                print(description)
+                # Random number of regions
+                nRegions = np.random.randint(2, 6)
+                for i in range(nRegions):
+                    region = np.random.randint(0, len(self.regions))
+                    
+                    # Print the regions
+                    print("r: {}".format(r))
+                    if self.getMapTile(x, y) == region:
+                        hintIsTrue = True
             case 3:
-                print("Hint: 1-3 regions that do not contain the treasure")
+                description = "Hint: 1-3 regions that do not contain the treasure"
+                print(description)
+
+                # Random number of regions
                 nRegions = np.random.randint(1, 4)
                 for i in range(nRegions):
                     r = np.random.randint(0, len(self.regions))
-                    print("Region: {}".format(r))
-                    if self.map[self.treasurePos[0]][self.treasurePos[1]] == r:
-                        self.hintTrue = False
-                self.hintTrue = True
-                return self.hintTrue
+                    print ("r: {}".format(r))
+                    if self.map[self.treasurePos[0]][self.treasurePos[1]] != r:
+                        hintIsTrue = True
+                    else:
+                        hintIsTrue = False
+
             case 4:
-                print("Hint: A large rectangle area that has the treasure")
+                description = "Hint: A large rectangle area that has the treasure"
+                print(description)
 
                 # Large rectangle area = 50% size
                 pirateHintLocation = np.random.randint(0, self.size[0], size=(2,))
                 rect_size = int(self.size[0] / 2)
-                for i in range(-rect_size, rect_size):
-                    for j in range(-rect_size, rect_size):
-                        if self.treasurePos + i == pirateHintLocation[0] and self.treasurePos + j == pirateHintLocation[1]:
-                            self.hintTrue = False
-                            return self.hintTrue
-                self.hintTrue = True
-                return self.hintTrue
-            case 5:
-                print("Hint: A small rectangle area that doesn't has the treasure")
 
+
+                if manhattanDist(pirateHintLocation, self.treasurePos) == 2*rect_size:
+                    hintIsTrue = True
+                else:
+                    hintIsTrue = False
+
+                # for i in range(-rect_size, rect_size):
+                #     for j in range(-rect_size, rect_size):
+                #         if self.treasurePos + i == pirateHintLocation[0] and self.treasurePos + j == pirateHintLocation[1]:
+                #             self.hintTrue = False
+                #             return self.hintTrue
+           
+            case 5:
+                description = "Hint: A small rectangle area that doesn't has the treasure"
+                print(description)
+            
                 # Small rectangle area = 3x3
                 pirateHintLocation = np.random.randint(0, self.size[0], size=(2,))
-                for i in range(-1, 2):
-                    for j in range(-1, 2):
-                        if self.treasurePos + i == pirateHintLocation[0] and self.treasurePos + j == pirateHintLocation[1]:
-                            self.hintTrue = False
-                            return self.hintTrue
-                self.hintTrue = True
-                return self.hintTrue
+                rectsize = 3
+
+                if manhattanDist(pirateHintLocation, self.treasurePos) == 2*rect_size:
+                    hintIsTrue = True
+                else:
+                    hintIsTrue = False
+
+                # for i in range(-1, 2):
+                #     for j in range(-1, 2):
+                #         if self.treasurePos + i == pirateHintLocation[0] and self.treasurePos + j == pirateHintLocation[1]:
+                #             self.hintTrue = False
+                #             return self.hintTrue
+
             case 6:
-                print("Hint: The nearest person to the treasure")
-                
-                # Manhattan distance
-                self.manhattanDist(self.treasurePos, self.Player.getPosition())
-                self.manhattanDist(self.treasurePos, self.Pirate.getPosition())
-                if self.manhattanDist(self.treasurePos, self.Player.getPosition()) < self.manhattanDist(self.treasurePos, self.Pirate.getPosition()):
-                    self.hintTrue = True
+                description = "Hint: The nearest person to the treasure"
+                print(description)
+
+                agentHint = np.random.randint(0, 2)
+                if agentHint == 0:
+                    print("Player")
+                    if manhattanDist(self.treasurePos, self.Player.getPosition()) < manhattanDist(self.treasurePos, self.Pirate.getPosition()):
+                        hintIsTrue = True
                 else:
-                    self.hintTrue = False
+                    print("Pirate")
+                    if manhattanDist(self.treasurePos, self.Pirate.getPosition()) < manhattanDist(self.treasurePos, self.Player.getPosition()):
+                        hintIsTruem = True
                 
-                return self.hintTrue
             case 7:
-                print("Hint: A column and/or a row that contain the treasure")
-                # Same column as treasure x = x
-                tmp_x = np.random.randint(0, self.size[0])
-                if tmp_x == self.treasurePos[0]:
-                    self.hintTrue = True
-                else:
-                    self.hintTrue = False
-                
-                # Same row as treasure y = y
-                tmp_y = np.random.randint(0, self.size[1])
-                if tmp_y == self.treasurePos[1]:
-                    self.hintTrue = True
-                else:
-                    self.hintTrue = False
+                description = "Hint: A column and/or a row that contain the treasure"
+                print(description)
 
-                return self.hintTrue
+                rowOrColumn = np.random.randint(0, 2)
+                if rowOrColumn == 0:
+                    print("Row", end=" ")
+                    # Same row as treasure y = y
+                    tmp_y = np.random.randint(0, self.size[1])
+                    if tmp_y == self.treasurePos[1]:
+                        hintIsTrue = True
+                else:
+                    print("Column", end=" ")
+                    # Same column as treasure x = x
+                    tmp_x = np.random.randint(0, self.size[0])
+                    if tmp_x == self.treasurePos[0]:
+                        hintIsTrue = True
+                
             case 8:
-                print("Hint: A column and/or a row that do not contain the treasure")
-                tmp_x = np.random.randint(0, self.size[0])
-                if tmp_x == self.treasurePos[0]:
-                    self.hintTrue = False
-                else:
-                    self.hintTrue = True
-                
-                # Same row as treasure y = y
-                tmp_y = np.random.randint(0, self.size[1])
-                if tmp_y == self.treasurePos[1]:
-                    self.hintTrue = False
-                else:
-                    self.hintTrue = True
+                description = "Hint: A column and/or a row that do not contain the treasure"
+                print(description)
 
-                return self.hintTrue
-                return True
+                rowOrColumn = np.random.randint(0, 2)
+                if rowOrColumn == 0:
+                    print("Row", end=" ")
+                    # Same row as treasure y = y
+                    tmp_y = np.random.randint(0, self.size[1])
+                    if tmp_y != self.treasurePos[1]:
+                        hintIsTrue = True
+                else:
+                    print("Column", end=" ")
+                    # Same column as treasure x = x
+                    tmp_x = np.random.randint(0, self.size[0])
+                    if tmp_x != self.treasurePos[0]:
+                        hintIsTrue = True
+
             case 9:
-                print("Hint: 2 regions that the treasure is somewhere in their boundary")
+                description = "Hint: 2 regions that the treasure is somewhere in their boundary"
+                print(description)
+
+                # Random 2 regions
                 regionHint = np.random.randint(0, len(self.regions), size=(2,))
+
+                # Scan 3x3 around treasure to see if the surrounding regions are the same as the hint
                 for i in range(-1, 2):
                     for j in range(-1, 2):
-                        if self.map[self.treasurePos[0] + i][self.treasurePos[1] + j] == regionHint[0]
-                            regionHint.remove(regionHint[0])
-                        if self.map[self.treasurePos[0] + i][self.treasurePos[1] + j] == regionHint[1]
-                            regionHint.remove(regionHint[1])
                         if len(regionHint) == 0:
-                            self.hintTrue = True
+                            hintIsTrue = True
                             break
-                return self.hintTrue
+                        if self.map[self.treasurePos[0] + i][self.treasurePos[1] + j] == regionHint[0]:
+                            regionHint.remove(regionHint[0])
+                        if self.map[self.treasurePos[0] + i][self.treasurePos[1] + j] == regionHint[1]:
+                            regionHint.remove(regionHint[1])
+
             case 10:
-                print("Hint: The treasure is somewhere in a boundary of 2 regions")
+                description = "Hint: The treasure is somewhere in a boundary of 2 regions"
+                print(description)
+
                 regionHint = []
+                # Scan 3x3 around to if there are more than 2 regions
                 for i in range(-1, 2):
                     for j in range(-1, 2):
+                        if len(regionHint) == 2:
+                            hintIsTrue = True
+                            break
                         if self.map[self.treasurePos[0] + i][self.treasurePos[1] + j] not in regionHint:
                             regionHint.append(self.map[self.treasurePos[0] + i][self.treasurePos[1] + j])
-                        if len(regionHint) == 2:
-                            self.hintTrue = True
-                            return self.hintTrue
-                self.hintTrue = False
-                return self.hintTrue
+                
             case 11:
-                print("Hint: The treasure is somewhere in an area bounded by 2-3 tiles from sea")
+                description = "Hint: The treasure is somewhere in an area bounded by 2-3 tiles from sea"
+                print(description)
+
+                if i + 2 > self.size[0] or j + 2 > self.size[1]:
+                    return False
+                if i - 2 < 0 or j - 2 < 0:
+                    return False
+                if i + 3 > self.size[0] or j + 3 > self.size[1]:
+                    return False
+                if i - 3 < 0 or j - 3 < 0:
+                    return False
+
+
+                # Scan 5x5 around treasure to see if there is a sea tile
                 for i in range(-2, 3):
                     for j in range(-2, 3):
                         if self.map[self.treasurePos[0] + i][self.treasurePos[1] + j] == 0:
-                            self.hintTrue = True
-                            return self.hintTrue
-                self.hintTrue = False
-                return self.hintTrue
+                            hintIsTrue = True
+
+                # Scam 7x7 around treasure to see if there is a sea tile
+                for i in range(-3, 4):
+                    for j in range(-3, 4):
+                        if self.map[self.treasurePos[0] + i][self.treasurePos[1] + j] == 0:
+                            hintIsTrue = True
+
 
             case 12:
-                print("Hint: A half of the map without treasure")
-                if self.treasurePos[0] < self.size[0] / 2:
+                description = "Hint: A half of the map without treasure"
+                print(description)
+
+                rng = np.random.randint(0, 4)
+                if rng == 0:
+                    print('The treasure is in the top half of the map')
                     if self.treasurePos[1] < self.size[1] / 2:
-                        print("Hint: The treasure is in the bottom right half of the map")
-                    else:
-                        print("Hint: The treasure is in the bottom left half of the map")
-                else:
-                    if self.treasurePos[1] < self.size[1] / 2:
-                        print("Hint: The treasure is in the top right half of the map")
-                    else:
-                        print("Hint: The treasure is in the top left half of the map")
+                        hintIsTrue = True
+                elif rng == 1:
+                    print('The treasure is in the bottom half of the map')
+                    if self.treasurePos[1] > self.size[1] / 2:
+                        hintIsTrue = True
+                elif rng == 2:
+                    print('The treasure is in the left half of the map')
+                    if self.treasurePos[0] < self.size[0] / 2:
+                        hintIsTrue = True
+                elif rng == 3:
+                    print('The treasure is in the right half of the map')
+                    if self.treasurePos[0] > self.size[0] / 2:
+                        hintIsTrue = True
 
             case 13:
-                print("Hint: From the center of the map/from the prison that he's staying, he tells you a direction that has the treasure (W, E, N, S or SE, SW, NE, NW)")
+                description = "Hint: From the center of the map/from the prison that he's staying, he tells you a direction that has the treasure (W, E, N, S or SE, SW, NE, NW)"
+                print(description)
+                
                 directions = ['W', 'E', 'N', 'S', 'SE', 'SW', 'NE', 'NW']
+                centerOrPrison = np.random.randint(0, 2)
                 directionHint = np.random.randint(0, 8)
-                if directionHint == 0:
-                    if self.treasurePos[0] < self.size[0] / 2:
-                        self.hintTrue = True
-                    else:
-                        self.hintTrue = False
-                elif directionHint == 1:
-                    if self.treasurePos[0] > self.size[0] / 2:
-                        self.hintTrue = True
-                    else:
-                        self.hintTrue = False
-                elif directionHint == 2:
-                    if self.treasurePos[1] < self.size[1] / 2:
-                        self.hintTrue = True
-                    else:
-                        self.hintTrue = False
-                elif directionHint == 3:
-                    if self.treasurePos[1] > self.size[1] / 2:
-                        self.hintTrue = True
-                    else:
-                        self.hintTrue = False
-                elif directionHint == 4:
-                    if self.treasurePos[0] > self.size[0] / 2 and self.treasurePos[1] > self.size[1] / 2:
-                        self.hintTrue = True
-                    else:
-                        self.hintTrue = False
-                elif directionHint == 5:
-                    if self.treasurePos[0] < self.size[0] / 2 and self.treasurePos[1] > self.size[1] / 2:
-                        self.hintTrue = True
-                    else:
-                        self.hintTrue = False
-                elif directionHint == 6:
-                    if self.treasurePos[0] > self.size[0] / 2 and self.treasurePos[1] < self.size[1] / 2:
-                        self.hintTrue = True
-                    else:
-                        self.hintTrue = False
-                elif directionHint == 7:
-                    if self.treasurePos[0] < self.size[0] / 2 and self.treasurePos[1] < self.size[1] / 2:
-                        self.hintTrue = True
-                    else:
-                        self.hintTrue = False
-                
-                return self.hintTrue
+
+                if centerOrPrison == 0:
+                    center = self.Pirate.getPosition()
+                else:
+                    center = (self.size[0] / 2, self.size[1] / 2)
+
+                if directions[directionHint] == 'W':
+                    if self.treasurePos[0] < center[0]:
+                        hintIsTrue = True
+                elif directions[directionHint] == 'E':
+                    if self.treasurePos[0] > center[0]:
+                        hintIsTrue = True
+                elif directions[directionHint] == 'N':
+                    if self.treasurePos[1] < center[1]:
+                        hintIsTrue = True
+                elif directions[directionHint] == 'S':
+                    if self.treasurePos[1] > center[1]:
+                        hintIsTrue = True
+                elif directions[directionHint] == 'SE':
+                    if self.treasurePos[0] > center[0] and self.treasurePos[1] > center[1]:
+                        hintIsTrue = True
+                elif directions[directionHint] == 'SW':
+                    if self.treasurePos[0] < center[0] and self.treasurePos[1] > center[1]:
+                        hintIsTrue = True
+                elif directions[directionHint] == 'NE':
+                    if self.treasurePos[0] > center[0] and self.treasurePos[1] < center[1]:
+                        hintIsTrue = True
+                elif directions[directionHint] == 'NW':
+                    if self.treasurePos[0] < center[0] and self.treasurePos[1] < center[1]:
+                        hintIsTrue = True
+
             case 14:
-                print("Hint: 2 squares that are different in size, the small one is placed inside the bigger one, the treasure is somewhere inside the gap between 2 squares")
-                
-                return True
+                description = "Hint: 2 squares that are different in size, the small one is placed inside the bigger one, the treasure is somewhere inside the gap between 2 squares"
+                print(description, "(WIP)")
+
+                pass
+
             case 15:
-                print("Hint: The treasure is in a region that has mountain")
-                r = self.getMapTerrain(self.treasurePos[0], self.treasurePos[1])
+                description = "Hint: The treasure is in a region that has mountain"
+                print(description)
+
+                r = self.getMapTile(self.treasurePos[0], self.treasurePos[1])
                 for i in range(self.size[1]):
                     for j in range(self.size[0]):
                         if self.getMapTerrain(j, i) == ord('M') and self.map[j][i] == r:
-                            self.hintTrue = True
-                            return self.hintTrue
-                self.hintTrue = False
-                return self.hintTrue
+                            hintIsTrue = True
+
             case _:
-                print('Invalid hint')
+                description = 'Invalid hint'
                 
                 return False
-
+        return hintIsTrue
         
     
     # Player turn, process player's actions (verify, move&scan, moveBigStep, teleport)
@@ -647,16 +700,14 @@ class treasureIsland:
     def pirateTurn(self):
         '''
             Pirate have 3 actions:
-            1. Move (if isFree == True)
+            1. Move 2 tiles (if isFree == True)
             2. Give hint
             
             Pirate's win condition:
             1. Pirate steps on treasure (after free)
         '''
-        def giveHint():
-            self.hint = np.random.randint(1, 16)
-            self.hintTrue = self.checkHint(self.hint)
-            return
+        def giveFirstHint():
+            pass
         
 
         # print("Pirate turn. Argh!\n")
