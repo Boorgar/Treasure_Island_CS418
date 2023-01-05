@@ -101,6 +101,10 @@ class treasureIsland:
     def getMap(self):
         return self.map
 
+    # Get map terrain
+    def getTerrain(self):
+        return self.terrain
+
     # Get treasurePos
     def getTreasurePos(self):
         return self.treasurePos
